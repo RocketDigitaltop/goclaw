@@ -126,17 +126,17 @@ case "${1:-serve}" in
       fi
 
       # If upgrade failed (often due to dirty schema on fresh DB), attempt
-      # automatic recovery: force-reset to version 0, then retry upgrade.
+      # automatic recovery: force-reset to NilVersion (-1), then retry upgrade.
       if [ "$UPGRADE_OK" = "false" ]; then
         echo "Upgrade failed — attempting automatic dirty-state recovery..."
-        echo "Running: migrate force 0"
+        echo "Running: migrate force -- -1"
         if command -v su-exec >/dev/null 2>&1 && [ "$(id -u)" = "0" ]; then
-          su-exec goclaw /app/goclaw migrate force 0 && \
+          su-exec goclaw /app/goclaw migrate force -- -1 && \
             echo "Retrying upgrade..." && \
             su-exec goclaw /app/goclaw upgrade || \
               echo "Upgrade warning: automatic recovery failed (may need manual intervention)"
         else
-          /app/goclaw migrate force 0 && \
+          /app/goclaw migrate force -- -1 && \
             echo "Retrying upgrade..." && \
             /app/goclaw upgrade || \
               echo "Upgrade warning: automatic recovery failed (may need manual intervention)"

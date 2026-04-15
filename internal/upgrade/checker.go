@@ -70,9 +70,9 @@ func FormatError(s *SchemaStatus) string {
 		return fmt.Sprintf(
 			"Database schema is in a dirty state (version %d).\n"+
 				"This usually means a migration failed partway.\n\n"+
-				"  Fix:  ./goclaw migrate force %d\n"+
+				"  Fix:  ./goclaw migrate force -- -1\n"+
 				"  Then: ./goclaw upgrade\n",
-			s.CurrentVersion, s.CurrentVersion-1,
+			s.CurrentVersion,
 		)
 	}
 	if s.CurrentVersion > s.RequiredVersion {
