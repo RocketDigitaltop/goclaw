@@ -73,7 +73,12 @@ func init() {
 		MsgAlreadySummoning:      "agent is already being summoned",
 		MsgSummoningUnavailable:  "summoning not available",
 		MsgNoDescription:         "agent has no description to resummon from",
+		MsgSummonCancelled:       "summon cancelled by user",
+		MsgCannotCancel:          "agent is not being summoned",
 		MsgInvalidPath:           "invalid path",
+
+		// Tenant backup / restore
+		MsgRestoreNewModeRejectsTenantID: "mode=new creates a fresh tenant; pass tenant_slug (not tenant_id) as the new tenant's target slug",
 
 		// Scheduler
 		MsgQueueFull:    "session queue is full",
@@ -89,12 +94,12 @@ func init() {
 		MsgNotImplemented: "%s not yet implemented",
 
 		// Agent links
-		MsgLinksNotConfigured:   "agent links not configured",
-		MsgInvalidDirection:     "direction must be outbound, inbound, or bidirectional",
-		MsgSourceTargetSame:     "source and target must be different agents",
-		MsgCannotDelegateOpen:   "cannot delegate to open agents — only predefined agents can be delegation targets",
-		MsgNoUpdatesProvided:    "no updates provided",
-		MsgInvalidLinkStatus:    "status must be active or disabled",
+		MsgLinksNotConfigured: "agent links not configured",
+		MsgInvalidDirection:   "direction must be outbound, inbound, or bidirectional",
+		MsgSourceTargetSame:   "source and target must be different agents",
+		MsgCannotDelegateOpen: "cannot delegate to open agents — only predefined agents can be delegation targets",
+		MsgNoUpdatesProvided:  "no updates provided",
+		MsgInvalidLinkStatus:  "status must be active or disabled",
 
 		// Teams
 		MsgTeamsNotConfigured:   "teams not configured",
@@ -194,13 +199,31 @@ func init() {
 		MsgTenantScopeRequired: "tenant scope is required for this operation",
 
 		// TTS / Voices
-		MsgTtsUnknownModel:  "unknown tts model: %s",
-		MsgVoicesListFailed: "failed to list voices: %s",
+		MsgTtsUnknownModel:       "unknown tts model: %s",
+		MsgVoicesListFailed:      "failed to list voices: %s",
+		MsgTtsGeminiInvalidVoice: "invalid Gemini voice: %s",
+		MsgTtsGeminiSpeakerLimit: "Gemini TTS supports at most 2 speakers",
+		MsgTtsGeminiInvalidModel:  "invalid Gemini TTS model: %s",
+		MsgTtsParamOutOfRange:     "TTS param %q value %v is out of range [%v, %v]",
+		MsgTtsParamUnknownKey:     "TTS param %q is not supported by this provider",
+		MsgTtsMiniMaxVoicesFailed: "failed to fetch MiniMax voices: %s",
 
 		// STT
 		MsgSTTAllProvidersFailed:     "All STT providers failed",
 		MsgSTTLegacyConfigDeprecated: "Legacy STT config deprecated; migrate to builtin_tools[stt]",
 		MsgSTTWhatsappPrivacyWarning: "Enabling STT for WhatsApp breaks end-to-end encryption for voice messages sent to this agent.",
 		MsgVoiceMessageFallback:      "[Voice message]",
+
+		// Hooks
+		MsgHookInvalidMatcher:          "invalid matcher regex: %s",
+		MsgHookCommandDisabledStandard: "command-type hooks are only available on Lite edition",
+		MsgHookPromptRequiresMatcher:   "prompt hooks require a matcher or if_expr (runaway-cost guard)",
+		MsgHookCircuitBreakerTripped:   "hook auto-disabled after repeated failures",
+		MsgHookBudgetExceeded:          "tenant hook token budget exceeded",
+		MsgHookPerTurnCapReached:       "hook invocation per-turn cap reached",
+		MsgHookBuiltinReadOnly:         "builtin hooks are read-only except for the enabled toggle",
+
+		// Message tool cross-target forward notice
+		MessageCrossTargetForwarded: "📤 Forwarded to %s as requested: %q",
 	})
 }

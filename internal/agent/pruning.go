@@ -14,13 +14,15 @@ import (
 // Context pruning defaults matching TS DEFAULT_CONTEXT_PRUNING_SETTINGS.
 const (
 	defaultKeepLastAssistants   = 3
-	defaultSoftTrimRatio        = 0.25
+	defaultSoftTrimRatio        = 0.3
 	defaultHardClearRatio       = 0.5
+	defaultPruningMode          = "cache-ttl"
 	defaultMinPrunableToolChars = 50000
 	defaultSoftTrimMaxChars     = 6000
 	defaultSoftTrimHeadChars    = 3000
 	defaultSoftTrimTailChars    = 3000
 	defaultHardClearPlaceholder = "[Old tool result content cleared]"
+	defaultCacheTTL             = "5m"
 	charsPerTokenEstimate       = 4
 
 	// Media tool results contain irreplaceable vision/audio descriptions
@@ -29,6 +31,40 @@ const (
 	mediaSoftTrimHeadChars = 4000
 	mediaSoftTrimTailChars = 4000
 )
+
+// PruningDefaults mirrors the private pruning const block for external
+// consumers (e.g. config.defaults RPC). Values are the SSoT the resolver uses
+// when a user config leaves a field unset.
+type PruningDefaults struct {
+	KeepLastAssistants   int
+	SoftTrimRatio        float64
+	HardClearRatio       float64
+	MinPrunableToolChars int
+	SoftTrimMaxChars     int
+	SoftTrimHeadChars    int
+	SoftTrimTailChars    int
+	HardClearEnabled     bool
+	HardClearPlaceholder string
+	TTL                  string
+}
+
+// DefaultPruningValues returns the private pruning consts packaged for
+// cross-package consumption. The resolver in resolvePruningSettings uses these
+// same values.
+func DefaultPruningValues() PruningDefaults {
+	return PruningDefaults{
+		KeepLastAssistants:   defaultKeepLastAssistants,
+		SoftTrimRatio:        defaultSoftTrimRatio,
+		HardClearRatio:       defaultHardClearRatio,
+		MinPrunableToolChars: defaultMinPrunableToolChars,
+		SoftTrimMaxChars:     defaultSoftTrimMaxChars,
+		SoftTrimHeadChars:    defaultSoftTrimHeadChars,
+		SoftTrimTailChars:    defaultSoftTrimTailChars,
+		HardClearEnabled:     true,
+		HardClearPlaceholder: defaultHardClearPlaceholder,
+		TTL:                  defaultCacheTTL,
+	}
+}
 
 // pruningEstimator wraps either a tiktoken counter or the legacy char-based heuristic.
 // When counter is nil, falls back to rune_count / charsPerTokenEstimate.
@@ -137,12 +173,16 @@ func resolvePruningSettings(cfg *config.ContextPruningConfig) *effectivePruningS
 // for non-ASCII content like Vietnamese/Chinese). When nil, falls back to the
 // legacy rune_count/charsPerTokenEstimate heuristic so existing tests pass.
 func pruneContextMessages(msgs []providers.Message, contextWindowTokens int, cfg *config.ContextPruningConfig, tc tokencount.TokenCounter, model string, stats *pipeline.PruneStats) []providers.Message {
-	// Opt-in: require explicit mode. Matches TS computeEffectiveSettings in settings.ts.
-	if cfg == nil || cfg.Mode == "" || cfg.Mode == "off" {
+	// Resolve effective mode: empty defaults to "cache-ttl" (enabled by default).
+	mode := defaultPruningMode
+	if cfg != nil && cfg.Mode != "" {
+		mode = cfg.Mode
+	}
+	if mode == "off" {
 		return msgs
 	}
-	if cfg.Mode != "cache-ttl" {
-		slog.Warn("context_pruning: unknown mode, disabled", "mode", cfg.Mode)
+	if mode != "cache-ttl" {
+		slog.Warn("context_pruning: unknown mode, disabled", "mode", mode)
 		return msgs
 	}
 	if contextWindowTokens <= 0 || len(msgs) == 0 {

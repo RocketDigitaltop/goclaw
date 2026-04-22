@@ -14,6 +14,7 @@ import (
 	"github.com/nextlevelbuilder/goclaw/internal/bus"
 	"github.com/nextlevelbuilder/goclaw/internal/config"
 	"github.com/nextlevelbuilder/goclaw/internal/eventbus"
+	"github.com/nextlevelbuilder/goclaw/internal/hooks"
 	"github.com/nextlevelbuilder/goclaw/internal/memory"
 	mcpbridge "github.com/nextlevelbuilder/goclaw/internal/mcp"
 	"github.com/nextlevelbuilder/goclaw/internal/media"
@@ -79,6 +80,9 @@ type ResolverDeps struct {
 	// Shared MCP connection pool — eliminates duplicate connections across agents
 	MCPPool *mcpbridge.Pool
 
+	// MCP grant checker — for runtime grant verification at BridgeTool.Execute
+	MCPGrantChecker mcpbridge.GrantChecker
+
 	// Skill access store — for per-agent skill visibility filtering
 	SkillAccessStore store.SkillAccessStore
 
@@ -116,11 +120,17 @@ type ResolverDeps struct {
 	// Global workspace root (GOCLAW_WORKSPACE)
 	Workspace string
 
+	// TTS auto mode from config: "off", "always", "inbound", "tagged"
+	TTSAutoMode string
+
 	// V3 auto-inject: episodic memory injection into system prompt (nil = disabled)
 	AutoInjector memory.AutoInjector
 
 	// V3 domain event bus for consolidation pipeline (nil = disabled)
 	DomainBus eventbus.DomainEventBus
+
+	// HookDispatcher fires lifecycle hook events (Issue #875). Nil = noop.
+	HookDispatcher hooks.Dispatcher
 
 	// Vault hook: called when a text file is uploaded by user (nil = no vault registration)
 	OnTextUploaded func(ctx context.Context, path, content string)
@@ -300,6 +310,9 @@ func NewManagedResolver(deps ResolverDeps) ResolverFunc {
 			if deps.MCPPool != nil {
 				mcpOpts = append(mcpOpts, mcpbridge.WithPool(deps.MCPPool))
 			}
+			if deps.MCPGrantChecker != nil {
+				mcpOpts = append(mcpOpts, mcpbridge.WithGrantChecker(deps.MCPGrantChecker))
+			}
 			mcpMgr := mcpbridge.NewManager(toolsReg, mcpOpts...)
 			if err := mcpMgr.LoadForAgent(ctx, ag.ID, ""); err != nil {
 				slog.Warn("failed to load MCP servers for agent", "agent", agentKey, "error", err)
@@ -469,6 +482,7 @@ func NewManagedResolver(deps ResolverDeps) ResolverFunc {
 			SandboxCfg:             sandboxCfgOverride,
 			Bus:                    deps.Bus,
 			DomainBus:              deps.DomainBus,
+			HookDispatcher:         deps.HookDispatcher,
 			Sessions:               deps.Sessions,
 			Tools:                  toolsReg,
 			ToolPolicy:             deps.ToolPolicy,
@@ -500,6 +514,7 @@ func NewManagedResolver(deps ResolverDeps) ResolverFunc {
 			PromptMode:             PromptMode(ag.ParsePromptMode()),
 			PinnedSkills:           ag.ParsePinnedSkills(),
 			SelfEvolve:             ag.ParseSelfEvolve(),
+			TTSAutoMode:            deps.TTSAutoMode,
 			SkillEvolve:            ag.AgentType == store.AgentTypePredefined && ag.ParseSkillEvolve(),
 			SkillNudgeInterval:     ag.ParseSkillNudgeInterval(),
 			WorkspaceSharing:       ag.ParseWorkspaceSharing(),
@@ -516,6 +531,7 @@ func NewManagedResolver(deps ResolverDeps) ResolverFunc {
 			MCPStore:               deps.MCPStore,
 			MCPPool:                deps.MCPPool,
 			MCPUserCredSrvs:        mcpUserCredSrvs,
+			MCPGrantChecker:        deps.MCPGrantChecker,
 			OrchMode:               orchMode,
 			DelegateTargets:        delegateTargets,
 			EvolutionMetricsStore:  evoMetricsStore,
